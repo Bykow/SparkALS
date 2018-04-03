@@ -16,12 +16,19 @@ scalacOptions ++= Seq("-deprecation")
 
 val sparkVersion = "2.2.1"
 
-// these dependencies are needed for a build
-libraryDependencies += "org.apache.spark" %% "spark-core" % sparkVersion
-libraryDependencies += "org.apache.spark" %% "spark-sql" % sparkVersion
-//libraryDependencies += "org.apache.spark" %% "spark-streaming" % sparkVersion,
-//libraryDependencies += "org.apache.spark" %% "spark-streaming-twitter" % sparkVersion
+libraryDependencies ++= Seq(
+  // these dependencies are needed for a build
+  "org.apache.spark" %% "spark-core" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion,
+  //"org.apache.spark" %% "spark-streaming" % sparkVersion,
+  //"org.apache.spark" %% "spark-streaming-twitter" % sparkVersion,
 
-// these dependencies are needed for a test build
-libraryDependencies += "junit" % "junit" % "4.12" % "test"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+  // these dependencies are needed for a test build
+  "junit" % "junit" % "4.12" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.4" % "test",
+
+  // Stanford Core Nlp provides a lemmatize
+  "edu.stanford.nlp" % "stanford-corenlp" % "3.4",
+  "edu.stanford.nlp" % "stanford-corenlp" % "3.4" classifier "models",
+  "edu.stanford.nlp" % "stanford-parser" % "3.4"
+)
