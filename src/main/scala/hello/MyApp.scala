@@ -26,7 +26,7 @@ object MyApp {
 
 
     val stopwords = "stopwords.txt"
-    val filenames = AIMData.filesname("subset10_", 0, 2)
+    val filenames = AIMData.filesname("aminer_papers_", 0, 2)
 
     val numTerms = if (args.length > 1) args(1).toInt else 20000
     val k = if (args.length > 0) args(0).toInt else 100
