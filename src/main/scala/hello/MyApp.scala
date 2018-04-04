@@ -31,7 +31,6 @@ object MyApp {
     val numTerms = if (args.length > 1) args(1).toInt else 20000
     val k = if (args.length > 0) args(0).toInt else 100
 
-
     val matrix = new CreateDocumentTermMatrix(spark)
     import matrix._
 

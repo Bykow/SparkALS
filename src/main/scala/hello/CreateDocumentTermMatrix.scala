@@ -12,6 +12,7 @@ import edu.stanford.nlp.ling.CoreAnnotations.{LemmaAnnotation, SentencesAnnotati
 import edu.stanford.nlp.pipeline.{Annotation, StanfordCoreNLP}
 import org.apache.spark.sql.functions.size
 import org.apache.spark.ml.feature.{CountVectorizer, IDF}
+import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -21,7 +22,7 @@ class CreateDocumentTermMatrix(private val spark: SparkSession) extends Serializ
   import spark.implicits._
 
   def parseArticles(filenames : Seq[String]) : Dataset[(String,String)] = {
-    val nameRDD = spark.sparkContext.parallelize(filenames)
+    val nameRDD : RDD[String] = spark.sparkContext.parallelize(filenames)
     spark.createDataset(nameRDD.flatMap(filename => getLinesfromFilename(filename).map(article => AIMData.parse(article))))
   }
 
