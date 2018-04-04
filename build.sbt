@@ -16,12 +16,16 @@ scalacOptions ++= Seq("-deprecation")
 
 val sparkVersion = "2.2.1"
 
+resolvers ++= Seq(
+  "apache-snapshots" at "http://repository.apache.org/snapshots/"
+)
+
 libraryDependencies ++= Seq(
   // these dependencies are needed for a build
   "org.apache.spark" %% "spark-core" % sparkVersion,
   "org.apache.spark" %% "spark-sql" % sparkVersion,
-  //"org.apache.spark" %% "spark-streaming" % sparkVersion,
-  //"org.apache.spark" %% "spark-streaming-twitter" % sparkVersion,
+  "org.apache.spark" %% "spark-mllib" % sparkVersion,
+  "org.apache.spark" %% "spark-streaming" % sparkVersion,
 
   // these dependencies are needed for a test build
   "junit" % "junit" % "4.12" % "test",

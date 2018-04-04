@@ -1,11 +1,17 @@
+/*
+ * Copyright 2015 and onwards Sanford Ryza, Uri Laserson, Sean Owen and Joshua Wills
+ *
+ * See LICENSE file for further information.
+ */
 package hello
 
 import java.util.Properties
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import edu.stanford.nlp.ling.CoreAnnotations.{LemmaAnnotation, SentencesAnnotation, TokensAnnotation}
 import edu.stanford.nlp.pipeline.{Annotation, StanfordCoreNLP}
+import org.apache.spark.sql.functions.size
+import org.apache.spark.ml.feature.{CountVectorizer, IDF}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -14,9 +20,9 @@ import scala.io.Source
 class CreateDocumentTermMatrix(private val spark: SparkSession) extends Serializable {
   import spark.implicits._
 
-  def parseArticles(filenames : Seq[String]) : RDD[(String,String)] = {
+  def parseArticles(filenames : Seq[String]) : Dataset[(String,String)] = {
     val nameRDD = spark.sparkContext.parallelize(filenames)
-    nameRDD.flatMap(filename => getLinesfromFilename(filename).map(article => AIMData.parse(article)))
+    spark.createDataset(nameRDD.flatMap(filename => getLinesfromFilename(filename).map(article => AIMData.parse(article))))
   }
 
   def getLinesfromFilename(filename : String) : Iterator[String] = {
@@ -52,7 +58,7 @@ class CreateDocumentTermMatrix(private val spark: SparkSession) extends Serializ
   }
 
   def contentsToTerms(articles: Dataset[(String, String)], stopWordsFile: String): Dataset[(String, Seq[String])] = {
-    val stopWords = scala.io.Source.fromFile(stopWordsFile).getLines().toSet
+    val stopWords = Source.fromFile(AIMData.filePath(stopWordsFile)).getLines().toSet
     val bStopWords = spark.sparkContext.broadcast(stopWords)
 
     articles.mapPartitions { iter =>
@@ -60,4 +66,37 @@ class CreateDocumentTermMatrix(private val spark: SparkSession) extends Serializ
       iter.map { case (title, contents) => (title, plainTextToLemmas(contents, bStopWords.value, pipeline)) }
     }
   }
+
+
+  /**
+    * Returns a document-term matrix where each element is the TF-IDF of the row's document and
+    * the column's term.
+    *
+    * @param docTexts a DF with two columns: title and text
+    */
+  def documentTermMatrix(docTexts: Dataset[(String, String)], stopWordsFile: String, numTerms: Int)
+  : (DataFrame, Array[String], Map[Long, String], Array[Double]) = {
+    val terms = contentsToTerms(docTexts, stopWordsFile)
+
+    val termsDF = terms.toDF("title", "terms")
+    val filtered = termsDF.where(size($"terms") > 1)
+
+    val countVectorizer = new CountVectorizer()
+      .setInputCol("terms").setOutputCol("termFreqs").setVocabSize(numTerms)
+    val vocabModel = countVectorizer.fit(filtered)
+    val docTermFreqs = vocabModel.transform(filtered)
+
+    val termIds = vocabModel.vocabulary
+
+    docTermFreqs.cache()
+
+    val docIds = docTermFreqs.rdd.map(_.getString(0)).zipWithUniqueId().map(_.swap).collect().toMap
+
+    val idf = new IDF().setInputCol("termFreqs").setOutputCol("tfidfVec")
+    val idfModel = idf.fit(docTermFreqs)
+    val docTermMatrix = idfModel.transform(docTermFreqs).select("title", "tfidfVec")
+
+    (docTermMatrix, termIds, docIds, idfModel.idf.toArray)
+  }
+
 }
